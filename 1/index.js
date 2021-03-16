@@ -6,7 +6,7 @@
         dvoika: [55.792263, 49.121826]
     } 
     
-    const init = (ymaps) => { 
+ const init = (ymaps) => { 
         const myMap = new ymaps.Map('map', {
                 center: coordinates.kremlin,
                 zoom: 9
@@ -19,6 +19,7 @@
             ),
 
             myPlacemark = new ymaps.Placemark(myMap.getCenter(), {
+                panoLayer: 'yandex#panorama',
                 hintContent: 'Kazan Kremlin',
                 balloonContent: 'Казанский Кремль'
             }, {
@@ -119,6 +120,72 @@
                 strokeWidth: 5,
                 animationTime: 4000
             })    
+        
+            function setBalloonContentLayout (placemark, panorama) {
+                // Создание макета содержимого балуна.
+                var BalloonContentLayout = ymaps.templateLayoutFactory.createClass(
+                    '<div id="panorama" style="width:256px;height:156px"></div>', {
+                        // Переопределяем функцию build, чтобы при формировании макета
+                        // создавать в нем плеер панорам.
+                        build: function () {
+                            // Сначала вызываем метод build родительского класса.
+                            BalloonContentLayout.superclass.build.call(this);
+                            // Добавляем плеер панорам в содержимое балуна.
+                            this._openPanorama();
+                        },
+                        clear: function () {
+                            this._destroyPanoramaPlayer();
+                            BalloonContentLayout.superclass.clear.call(this);
+                        },
+                        _openPanorama: function () {
+                            if (!this._panoramaPlayer) {
+                                var el = this.getParentElement().querySelector('#panorama');
+                                this._panoramaPlayer = new ymaps.panorama.Player(el, panorama, {
+                                    controls: ['panoramaName']
+                                });
+                            }
+                        },
+                        _destroyPanoramaPlayer: function () {
+                            if (this._panoramaPlayer) {
+                                this._panoramaPlayer.destroy();
+                                this._panoramaPlayer = null;
+                            }
+                        }
+                    });
+                placemark.options.set('balloonContentLayout', BalloonContentLayout);
+            }
+        
+            function requestForPanorama (e) {
+                var placemark = e.get('target'),
+                    coords = placemark.geometry.getCoordinates(),
+                    panoLayer = placemark.properties.get('panoLayer');
+        
+                placemark.properties.set('balloonContent', "Идет проверка на наличие панорамы...");
+        
+                ymaps.panorama.locate(coords, {
+                    layer: panoLayer
+                }).then(
+                    function (panoramas) {
+                        if (panoramas.length) {
+                            setBalloonContentLayout(placemark, panoramas[0]);
+                        } else {
+                            placemark.properties.set('balloonContent', "Для данной точки панорамы нет.");
+                        }
+                    },
+                    function (err) {
+                        placemark.properties.set('balloonContent',
+                            "При попытке открыть панораму произошла ошибка: " + err.toString());
+                    }
+                );
+            }
+        
+            myPlacemarkKazan.events.once('balloonopen', requestForPanorama);
+            myPlacemarkWithContent.events.once('balloonopen', requestForPanorama);
+            myPlacemark2ka.events.once('balloonopen', requestForPanorama);
+            myPlacemarkSkovorodka.events.once('balloonopen', requestForPanorama);
+            myPlacemark.events.once('balloonopen', requestForPanorama);
+
+        
 
         myMap.geoObjects
             .add(myPlacemark)
