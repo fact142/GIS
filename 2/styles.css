@@ -1,0 +1,33 @@
+.rows {
+
+	overflow: hidden;
+
+}
+
+.left-col {
+
+	width: 60%;
+
+	float: left;
+
+	text-align: justify;
+
+}
+
+.right-col {
+	margin-left: 65%;
+}
+
+.fixed-box {
+    float: left;
+	height: 200px;
+}
+
+
+.fixed {
+	float: left;    
+	position: fixed;
+    padding: 15px 0;
+	top: 0;
+
+}
